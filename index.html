@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+    <form action="{{ url_for('generate_playlist') }}" method="post">
+        <label for="book">Enter the book you're currently reading:</label><br>
+        <input type="text" id="book" name="book" required>
+        <button type="submit">Generate Playlist</button>
+    </form>
+{% endblock %}

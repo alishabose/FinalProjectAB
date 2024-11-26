@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+    <h2>Playlist for "{{ book_title }}"</h2>
+    <div class="playlist">
+        {% for song in playlist %}
+            <div class="song-card">
+                <h3>{{ song.title }}</h3>
+                <p>Artist: {{ song.artist }}</p>
+                <p>Genre: {{ song.genre }}</p>
+            </div>
+        {% endfor %}
+    </div>
+    <a href="{{ url_for('index') }}">Go Back</a>
+{% endblock %}
