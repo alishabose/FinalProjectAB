@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Playlist Generator</title>
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #f7e5ec;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+        }
+        h1 {
+            font-family: 'Nunito', sans-serif;
+            text-align: center;
+            color: #6a7bff;
+            font-size: 5em;
+            margin-bottom: 40px;
+        }
+        .form-container {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        input[type="text"] {
+            padding: 12px;
+            width: 90%;
+            max-width: 300px;
+            border-radius: 8px;
+            border: 2px solid #6a7bff;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        input[type="submit"] {
+            padding: 12px 30px;
+            background-color: #6a7bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.2em;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease;
+        }
+        input[type="submit"]:hover {
+            background-color: #5a6ccf;
+        }
+        .error {
+            color: #d9534f;
+            margin-top: 15px;
+        }
+        .image-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin-top: 30px;
+        }
+        .image-container img {
+            max-width: 300px;
+            margin: 15px 0;
+            border-radius: 12px;
+            transition: transform 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Welcome to the Book Playlist Generator</h1>
+
+<div class="form-container">
+    <form method="POST">
+        <label for="book_title" style="font-size: 1.3em; color: #333;">Enter Book Title:</label><br>
+        <input type="text" id="book_title" name="book_title" required><br><br>
+        <input type="submit" value="Generate Playlist">
+    </form>
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+</div>
+
+<div class="image-container">
+    <img src="https://png.pngtree.com/png-vector/20231020/ourmid/pngtree-watercolor-library-book-clip-art-png-image_10285452.png" alt="Books">
+    <img src="https://png.pngtree.com/png-vector/20220723/ourmid/pngtree-music-note-staves-png-image_5998977.png" alt="Music">
+</div>
+
+</body>
+</html>
