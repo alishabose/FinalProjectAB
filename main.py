@@ -1,97 +1,158 @@
+import requests
+from flask import Flask, render_template, request, session, redirect
+from key import LASTFM_API_KEY, secret_key
 
-#set up APIs
-#OpenLibrary & Spotify
+# My LAST FM KEY
+LASTFM_API_URL = "http://ws.audioscrobbler.com/2.0/"
+LASTFM_API_KEY = LASTFM_API_KEY
 
-def get_apis():
+# MY OPENLIB URL
+OPENLIBRARY_API_URL = "https://openlibrary.org/search.json"
+app = Flask(__name__)
 
-    #OpenLibrary API
-    #working!
-    openlibrary_baseurl = "https://openlibrary.org"
+# MY FLASK SESSION KEY
+app.secret_key = secret_key # REPLACE WITH FLASK KEY (ANY NUMBERS WORK)
 
-    #Spotify API
-    #waiting on approval to create an app, then will get my secret & ID
-    spotify_id = ""
-    spotify_secret = ""
-    spotify_token = authenticate_spotify(spotify_id, spotify_secret)
+def search_lastfm(query):
 
-    return spotify_token, openlibrary_baseurl
-
-#get book data from OpenLibrary with book title as user input
-#nook title, cover, summary
-#keywords from the summary
-
-def get_book_data(book_title):
-
-    url = "https://api.openlibrary.org/books/" + book_title
+    url = f"{LASTFM_API_URL}?method=track.search&track={query}&api_key={LASTFM_API_KEY}&format=json"
     response = requests.get(url)
+    if response.status_code == 200:
+        tracks = response.json()['results']['trackmatches']['track']
 
-    #write code to get the title, cover, and summary (JSON)
-    return title, cover_url, summary
-
-def extract_keywords(summary):
-    #use summary from above for this function
-    #create a list of important keywords from the summary
-
-    return list(keywords)
-
-#het songs from Spotify that match keywords
-#filter songs based on genre
-
-def get_songs(keywords, spotify_token):
-    #hets songs on Spotify based on the keywoerds
-
-    playlist = []
-    for keyword in keywords:
-        #call spotify URL
-        #loop through tracks and find matching genres/keyword
+        # MAKING SURE TRACK EXISTS
+        valid_tracks = []
         for track in tracks:
-            #sorting feature
-            playlist.append(track)
-    return playlist
+            if 'url' in track and track['url'] != '':
+                valid_tracks.append(track)
+        return valid_tracks
+    else:
+        return []
 
-#create playlist with book cover and songs (8-10)
 
-def create_playlist(book_data, playlist):
+def collect_songs_by_genre(keywords, max_songs):
+    collected_songs = []
+    seen_songs = set()
 
-    #create a final playlist out of the book title, cover, and all the songs
-    final_playlist = {
-        title, cover, playlist
-    }
+    while len(collected_songs) < max_songs and keywords:
+        for keyword in keywords:
+            if len(collected_songs) >= max_songs:
+                break
 
-    return final_playlist
+            print(f"Searching for tracks related to: {keyword}")
+            tracks = search_lastfm(keyword)
 
-#show playlist with HTML & CSS nicely
+            # FILTERS OUT PODCASTS, SHOWS, ETC. (NOT EXHAUSTIVE LIST)
+            if tracks:
+                for track in tracks:
+                    track_info = (track['name'], track['artist'])
+                    if (track_info not in seen_songs and
+                            "episode" not in track['name'].lower() and
+                            "podcast" not in track['name'].lower() and
+                            "ep" not in track['name'].lower() and
+                            "chapter" not in track['name'].lower() and
+                            "comic" not in track['name'].lower() and
+                            "audiobook" not in track['name'].lower() and
+                            "narrative" not in track['name'].lower() and
+                            "dialogue" not in track['name'].lower() and
+                            "story" not in track['name'].lower() and
+                            "lecture" not in track['name'].lower() and
+                            "newspaper" not in track['name'].lower() and
+                            "show" not in track['name'].lower() and
+                            "soundtrack" not in track['name'].lower()):
+                        seen_songs.add(track_info)
+                        collected_songs.append({
+                            "name": track['name'],
+                            "artist": track['artist'],
+                            "url": track.get('url', 'No URL available')
+                        })
+                        break
+            else:
+                print(f"No tracks found for {keyword}.")
 
-#uses flask like in our last assignment, design the page
-#also not completely done yet
+    return collected_songs
 
-def css_playlist(final_playlist):
-    from flask import Flask, render_template
 
-    app = Flask(__name__)
+def get_book_details(book_title):
 
-    @app.route("/")
-    def home():
-        return render_template("base.html", playlist=final_playlist)
+    query = book_title.lower().replace(' ', '+')
+    url = f"{OPENLIBRARY_API_URL}?q={query}"
 
+    response = requests.get(url)
+    if response.status_code == 200:
+        try:
+            data = response.json()
+            books = data.get('docs', [])
+
+            if books:
+                book = books[0]
+                title = book.get('title', 'No title found')
+                author = book.get('author_name', ['Unknown author'])[0]
+                cover_id = book.get('cover_i', None)
+                cover_url = f'https://covers.openlibrary.org/b/id/{cover_id}-L.jpg' if cover_id else None
+                summary = book.get('description', 'No description available')
+                subjects = book.get('subject', [])
+                return {
+                    'title': title,
+                    'author': author,
+                    'cover_url': cover_url,
+                    'summary': summary,
+                    'subjects': subjects
+                }
+            else:
+                return None
+        except Exception as e:
+            print(f"Error getting book details, so sorry: {e}")
+            return None
+    else:
+        return None
+
+
+def create_playlist_for_book(book_title, max_songs=15):
+
+    book_details = get_book_details(book_title)
+    if book_details:
+        subjects = book_details['subjects']
+
+        playlist = collect_songs_by_genre(subjects, max_songs)
+
+        return book_details, playlist
+    else:
+        return None, None
+
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        book_title = request.form['book_title']
+        book_details, playlist = create_playlist_for_book(book_title, max_songs=15)
+
+        if book_details:
+            session['book_details'] = book_details
+            session['playlist'] = playlist
+            return render_template('confirm_book.html', book_details=book_details)
+        else:
+            return render_template('index.html', error="No book found with that title.")
+
+    return render_template('index.html')
+
+# THIS IS IN CASE THE USER PICKS THE WRONG BOOK/WRONG RESULT
+@app.route('/confirm', methods=['POST'])
+def confirm_book():
+    if 'confirm' in request.form:
+        return render_template('playlist.html', book_details=session['book_details'], playlist=session['playlist'])
+    elif 'go_back' in request.form:
+        return redirect('/')
+
+
+@app.route('/playlist', methods=['POST'])
+def playlist():
+    if 'book_details' in session and 'playlist' in session:
+        book_details = session['book_details']
+        playlist = session['playlist']
+        return render_template('playlist.html', book_details=book_details, playlist=playlist)
+    else:
+        return redirect('/')
+
+if __name__ == '__main__':
     app.run(debug=True)
-
-def main():
-    #create & authenticateAPIs
-    openlibrary_base_url, spotify_token = get_apis()
-
-    #get book data (title from user, data from API)
-    book_title = input("Enter the title of the book: ")
-    book_data = get_book_data(book_title)
-
-    #get keywords
-    keywords = extract_keywords(book_data["summary"])
-
-    #get matching songs
-    songs = get_songs(keywords, spotify_token)
-
-    #get playlist
-    playlist = create_playlist(book_data, songs)
-
-    #create playlist
-    css_playlist(playlist)
